@@ -1,23 +1,33 @@
-# import dlib
-# import numpy as np
-import face_recognition
+import dlib
+import numpy as np
+import cv2
 # import face_recognition_models
+
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor('models/shape_predictor_68_face_landmarks.dat')
+facerec = dlib.face_recognition_model_v1('models/dlib_face_recognition_resnet_model_v1.dat')
 
 class FaceFilter():
     def __init__(self, reference_file_path, threshold = 0.6):
-        image = face_recognition.load_image_file(reference_file_path)
-        self.encoding = face_recognition.face_encodings(image)[0] # Note: we take only first face, so the reference file should only contain one face.
+        image = cv2.imread(reference_file_path)
+        rect = detector(image, 1)[0]
+        shape = predictor(image, rect)
+        self.encoding = np.array(facerec.compute_face_descriptor(image, shape))
+        # self.encoding = face_recognition.face_encodings(image)[0] 
+        # Note: we take only first face, so the reference file should only contain one face. We could also keep all faces found and filter against multiple faces
         self.threshold = threshold
     
     def check(self, detected_face):
-        encodings = face_recognition.face_encodings(detected_face.image) # we could use detected landmarks, but I did not manage to do so. TODO The copy/paste below should help
-        if encodings is not None and len(encodings) > 0:
-            score = face_recognition.face_distance([self.encoding], encodings[0])
-            print(score)
-            return score <= self.threshold
-        else:
-            print("No face encodings found")
-            return False
+        rect = detector(detected_face.image, 1)[0]
+        shape = predictor(detected_face.image, rect)
+        encodings = facerec.compute_face_descriptor(detected_face.image, shape)
+        # encodings = face_recognition.face_encodings(detected_face.image)[0] 
+        # we could use detected landmarks, but I did not manage to do so
+        score = np.linalg.norm(self.encoding - encodings)
+        # score = face_recognition.face_distance([self.encoding], encodings)
+        print(score)
+        return score <= self.threshold
+
 
 # # Copy/Paste (mostly) from private method in face_recognition
 # face_recognition_model = face_recognition_models.face_recognition_model_location()
