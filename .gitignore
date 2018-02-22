@@ -7,4 +7,5 @@
 !lib
 !scripts
 !plugins
+!src
 !get-models.sh
